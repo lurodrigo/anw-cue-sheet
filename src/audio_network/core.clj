@@ -9,7 +9,6 @@
             [dk.ative.docjure.spreadsheet :as x]
             [etaoin.api :as e]
             [me.raynes.fs :as fs]
-            [tick.alpha.api :as t]
             [taoensso.timbre :as log]
             [seesaw.core :as s])
   (:import (java.io File ByteArrayInputStream)))
@@ -42,7 +41,8 @@
   [line]
   (let [[valid edit reel channel trans source-in source-out
          record-in record-out] (re-find line-re line)
-        mat     (re-matcher #"(ANW\S*)\." line)
+        ; mat     (re-matcher #"(ANW\S*)\." line)
+        mat     (re-matcher #"(?m)\* FROM CLIP NAME: (.*)[\r$]" line)
         matches (->> (repeatedly #(re-find mat))
                      (take-while some?)
                      (mapv second))
@@ -89,14 +89,18 @@
     {:record-in  time-in
      :record-out time-out
      :duration   duration
-     :from       (when from
-                   (normalize-anw from))}))
+     :from       from}))
 
 (defn process-edl
   [{:keys [parsed-lines]}]
   (->> parsed-lines
-       (mapv process-edl-entry)
-       (filterv :from)
+       (map process-edl-entry)
+       (filter :from)
+       (map (fn [{:keys [from] :as m}]
+              (assoc m :from (string/trim
+                               (if-let [no-suffix (second (re-find #"(.*)(_\d)$" from))]
+                                 no-suffix
+                                 from)))))
        (partition-by :from)
        (fmap (fn [[entry :as items]]
                (let [{:keys [record-out]} (last items)]
@@ -227,10 +231,15 @@
                       process-edl)]
     (mapv (fn [item]
             (let [{:keys [record-in record-out duration from]} item
-                  db-entry (get-an-info! from)]
+                  normalized (normalize-anw from)
+                  db-entry (if normalized
+                             (get-an-info! normalized)
+                             {"Track name" ""
+                              "Written by" ""
+                              "ISRC"       ""})]
 
               (reset! at db-entry)
-              {:from     from
+              {:from     (if normalized normalized from)
                :title    (db-entry "Track name")
                :duration duration
                :time-in  record-in
@@ -259,7 +268,10 @@
     (doseq [[idx {:keys [from title duration time-in time-out authors isrc] :as item}]
             (map-indexed (fn [idx item] [idx item]) data)]
       (let [row (+ start-row idx)]
-        (x/set-cell! (x/select-cell (str title-col row) sheet) (str from " - " title))
+        (x/set-cell! (x/select-cell (str title-col row) sheet)
+                     (if (= title "")
+                       from
+                       (str from " - " title)))
         (x/set-cell! (x/select-cell (str duration-col row) sheet) duration)
         (x/set-cell! (x/select-cell (str time-in-col row) sheet) time-in)
         (x/set-cell! (x/select-cell (str time-out-col row) sheet) time-out)

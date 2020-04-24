@@ -13,6 +13,5 @@
                  [dk.ative/docjure "1.13.0"]
                  [etaoin "0.3.6"]
                  [me.raynes/fs "1.4.6"]
-                 [seesaw "1.5.0"]
-                 [tick "0.4.23-alpha"]]
+                 [seesaw "1.5.0"]]
   :repl-options {:init-ns audio-network.core})
