@@ -10,6 +10,7 @@
             [etaoin.api :as e]
             [me.raynes.fs :as fs]
             [tick.alpha.api :as t]
+            [taoensso.timbre :as log]
             [seesaw.core :as s])
   (:import (java.io File ByteArrayInputStream)))
 
@@ -160,6 +161,8 @@
   "Gets info for an Audio Network track"
   [driver query]
   (do
+    (log/info "Searching" query "at Audio Network website.")
+
     (doto driver
       (e/go (str "https://www.audionetwork.com/track/searchkeyword?keyword=" query))
       (e/wait-visible {:css ".track__title"}))
@@ -170,6 +173,8 @@
                                   (filterv (fn [[_ title]]
                                              (= (normalize-anw query) (normalize-anw title)))))
           without-awn (re-find #"\d+/\d+" title)]
+
+      (log/info "Going to track page.")
 
       (doto driver
         (e/click-el title-el)
@@ -192,19 +197,27 @@
   [anw-code]
   (let [data @db]
     (if (get-in data [anw-code "ISRC"])
-      (get data anw-code)
       (do
+        (log/info anw-code "found at local db.")
+        (get data anw-code))
+      (do
+        (log/info anw-code "not found a local db.")
+
         (when-not @driver
+          (log/info "Resetting chrome driver.")
           (reset! driver (e/chrome)))
 
         (try
           (let [data (d/with-retry {:retry-on    Exception
                                     :max-retries 3}
                                    (an-info @driver anw-code))]
+            (log/info "Data fetched for" anw-code ":\n" data)
             (pers/swap! db assoc anw-code data)
             data)
 
           (catch Exception e nil))))))
+
+(defonce at (atom nil))
 
 (defn cue-data-from-edl [file]
   (let [processed (-> (if (string? file)
@@ -214,8 +227,9 @@
                       process-edl)]
     (mapv (fn [item]
             (let [{:keys [record-in record-out duration from]} item
-                  ; db-entry (if-let [entry (get @db from)] entry {})
                   db-entry (get-an-info! from)]
+
+              (reset! at db-entry)
               {:from     from
                :title    (db-entry "Track name")
                :duration duration

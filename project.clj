@@ -7,10 +7,12 @@
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [org.clojure/algo.generic "0.1.3"]
                  [alandipert/enduro "1.2.0"]
-                 [me.raynes/fs "1.4.6"]
+                 [com.fzakaria/slf4j-timbre "0.3.14"]
+                 [com.taoensso/timbre "4.10.0"]
                  [diehard "0.9.1"]
                  [dk.ative/docjure "1.13.0"]
                  [etaoin "0.3.6"]
+                 [me.raynes/fs "1.4.6"]
                  [seesaw "1.5.0"]
                  [tick "0.4.23-alpha"]]
   :repl-options {:init-ns audio-network.core})
