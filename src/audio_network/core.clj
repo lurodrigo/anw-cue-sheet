@@ -9,8 +9,7 @@
             [dk.ative.docjure.spreadsheet :as x]
             [etaoin.api :as e]
             [me.raynes.fs :as fs]
-            [taoensso.timbre :as log]
-            [seesaw.core :as s])
+            [taoensso.timbre :as log])
   (:import (java.io File ByteArrayInputStream)))
 
 (defonce db (do
@@ -41,7 +40,6 @@
   [line]
   (let [[valid edit reel channel trans source-in source-out
          record-in record-out] (re-find line-re line)
-        ; mat     (re-matcher #"(ANW\S*)\." line)
         mat     (re-matcher #"(?m)\* FROM CLIP NAME: (.*)[\r$]" line)
         matches (->> (repeatedly #(re-find mat))
                      (take-while some?)
@@ -59,22 +57,14 @@
        :record-out record-out
        :from       from})))
 
-(defn parse-edl
-  [file]
-  (let [[meta & lines] (-> (slurp file)
-                           (string/split line-marker))
-        parsed-lines (mapv parse-line lines)]
-    {:meta         meta
-     :parsed-lines (filterv some? parsed-lines)}))
-
 (defn extract-tc
   [tc]
   (mapv #(Integer/parseInt %)
         (-> (re-find #"(\d{2}):(\d{2}):(\d{2})" tc)
             (subvec 1))))
 
-(defn process-edl-entry
-  [{:keys [record-in record-out from channel]}]
+(defn process-entry
+  [{:keys [record-in record-out from]}]
   (let [time-in  (subs record-in 0 8)
         time-out (subs record-out 0 8)
         seconds  (let [[hi mi si] (extract-tc time-in)
@@ -91,10 +81,40 @@
      :duration   duration
      :from       from}))
 
-(defn process-edl
+(defn parse-txt-line
+  [line]
+  (let [line-re #"(.*)\t(.*)\t(.*)\t(.*)\t(.*)\t(.*)\t(.*)"
+        ts-re   #"\d{2}:\d{2}:\d{2}:\d{2}"
+        [_ _ _ from record-in record-out] (some->> line
+                                                                      (re-find line-re)
+                                                                      (mapv string/trim))]
+    (when (and from (re-find ts-re record-in))
+      {:record-in  record-in
+       :record-out record-out
+       :from       from})))
+
+(defmulti parse fs/extension)
+
+(defmethod parse ".txt"
+  [file]
+  {:meta         ""
+   :parsed-lines (->> (slurp file)
+                      (string/split-lines)
+                      (map parse-txt-line)
+                      (filter identity))})
+
+(defmethod parse ".edl"
+  [file]
+  (let [[meta & lines] (-> (slurp file)
+                           (string/split line-marker))
+        parsed-lines (mapv parse-line lines)]
+    {:meta         meta
+     :parsed-lines (filterv some? parsed-lines)}))
+
+(defn process
   [{:keys [parsed-lines]}]
   (->> parsed-lines
-       (map process-edl-entry)
+       (map process-entry)
        (filter :from)
        (map (fn [{:keys [from] :as m}]
               (assoc m :from (string/trim
@@ -106,7 +126,7 @@
                (let [{:keys [record-out]} (last items)]
                  (-> entry
                      (assoc :record-out record-out)
-                     process-edl-entry))))))
+                     process-entry))))))
 
 (defn music-file?
   [extensions file]
@@ -223,20 +243,20 @@
 
 (defonce at (atom nil))
 
-(defn cue-data-from-edl [file]
+(defn cue-data-from-file [file]
   (let [processed (-> (if (string? file)
                         file
                         (.getPath file))
-                      parse-edl
-                      process-edl)]
+                      parse
+                      process)]
     (mapv (fn [item]
             (let [{:keys [record-in record-out duration from]} item
                   normalized (normalize-anw from)
-                  db-entry (if normalized
-                             (get-an-info! normalized)
-                             {"Track name" ""
-                              "Written by" ""
-                              "ISRC"       ""})]
+                  db-entry   (if normalized
+                               (get-an-info! normalized)
+                               {"Track name" ""
+                                "Written by" ""
+                                "ISRC"       ""})]
 
               (reset! at db-entry)
               {:from     (if normalized normalized from)
@@ -248,13 +268,13 @@
                :isrc     (db-entry "ISRC")}))
           processed)))
 
-(defn cue-from-edl
+(defn cue-from-file
   [file template {:keys [sheet start-row
                          title-col duration-col time-in-col time-out-col authors-col isrc-col]
                   :or   {sheet       1 start-row 12 title-col "A" duration-col "C"
                          time-in-col "D" time-out-col "E" authors-col "F" isrc-col "L"}
                   :as   opts}]
-  (let [data        (cue-data-from-edl file)
+  (let [data        (cue-data-from-file file)
         path        (if (string? file)
                       file
                       (.getPath ^File file))
@@ -265,7 +285,7 @@
         sheet       (if (int? sheet)
                       (nth (x/sheet-seq wb) (dec sheet))
                       (x/select-sheet wb sheet))]
-    (doseq [[idx {:keys [from title duration time-in time-out authors isrc] :as item}]
+    (doseq [[idx {:keys [from title duration time-in time-out authors isrc]}]
             (map-indexed (fn [idx item] [idx item]) data)]
       (let [row (+ start-row idx)]
         (x/set-cell! (x/select-cell (str title-col row) sheet)
@@ -281,11 +301,11 @@
 
     (x/save-workbook! output-path wb)))
 
-(defn cue-from-edls
-  [edl-dir template opts]
-  (doseq [edl (fs/find-files* edl-dir #(when (fs/file? %)
-                                         (= (string/lower-case (fs/extension %)) ".edl")))]
+(defn cue-from-files
+  [dir template opts]
+  (doseq [edl (fs/find-files* dir #(when (fs/file? %)
+                                         (contains? #{".edl" ".txt"} (string/lower-case (fs/extension %)))))]
     (println "Working on" (.getPath ^File edl) "...")
-    (cue-from-edl edl template opts)))
+    (cue-from-file edl template opts)))
 
 (defn -main [& args])
