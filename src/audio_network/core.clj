@@ -83,7 +83,7 @@
 
 (defn parse-txt-line
   [line]
-  (let [line-re #"(.*)\t(.*)\t(.*)\t(.*)\t(.*)\t(.*)\t(.*)"
+  (let [line-re #"([^\t]*)\t+([^\t]*)\t+([^\t]*)\t+([^\t]*)\t+([^\t]*)\t+([^\t]*)\t+([^\t]*)"
         ts-re   #"\d{2}:\d{2}:\d{2}:\d{2}"
         [_ _ _ from record-in record-out] (some->> line
                                                                       (re-find line-re)
@@ -116,12 +116,16 @@
   (->> parsed-lines
        (map process-entry)
        (filter :from)
+       (sort-by :record-in)
        (map (fn [{:keys [from] :as m}]
               (assoc m :from (string/trim
                                (if-let [no-suffix (second (re-find #"(.*)(_\d)$" from))]
                                  no-suffix
                                  from)))))
-       (partition-by :from)
+       (partition-by (fn [{:keys [from]}]
+                       (if-let [n (normalize-anw from)]
+                         n
+                         from)))
        (fmap (fn [[entry :as items]]
                (let [{:keys [record-out]} (last items)]
                  (-> entry
