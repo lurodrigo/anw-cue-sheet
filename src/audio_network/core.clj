@@ -321,7 +321,7 @@
   [dir template opts]
   (doseq [edl (fs/find-files* dir #(when (fs/file? %)
                                      (contains? #{".edl" ".txt"} (string/lower-case (fs/extension %)))))]
-    (println "Working on" (.getPath ^File edl) "...")
+    (log/info "Working on" (.getPath ^File edl) "...")
     (cue-from-file edl template opts)))
 
 (defn -main [& args])
