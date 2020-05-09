@@ -16,6 +16,8 @@
               (fs/mkdir (fs/expand-home "~/.anw"))
               (pers/file-atom {} (fs/expand-home "~/.anw/db.atom"))))
 
+(defonce headless? (atom true))
+
 (defonce driver (atom nil))
 
 (def ^:const line-marker #"(?m)(?=^\d{3})")
@@ -86,8 +88,12 @@
   (let [line-re #"([^\t]*)\t+([^\t]*)\t+([^\t]*)\t+([^\t]*)\t+([^\t]*)\t+([^\t]*)\t+([^\t]*)"
         ts-re   #"\d{2}:\d{2}:\d{2}:\d{2}"
         [_ _ _ from record-in record-out] (some->> line
-                                                                      (re-find line-re)
-                                                                      (mapv string/trim))]
+                                                   (re-find line-re)
+                                                   (mapv string/trim)
+                                                   (remove empty?))
+        _ (println (some->> line
+                            (re-find line-re)
+                            (mapv string/trim)))]
     (when (and from (re-find ts-re record-in))
       {:record-in  record-in
        :record-out record-out
@@ -221,6 +227,13 @@
                  (mapv (comp extract-inner (partial e/get-element-inner-html-el driver))
                        (e/query-all driver {:css ".track__advanced-value"})))))))
 
+; TODO ensure exists properly, dispose
+(defn reset-driver!
+  []
+  (when-not @driver
+    (log/info "Resetting chrome driver.")
+    (reset! driver (e/chrome {:headless @headless?}))))
+
 (defn get-an-info!
   [anw-code]
   (let [data @db]
@@ -231,9 +244,7 @@
       (do
         (log/info anw-code "not found a local db.")
 
-        (when-not @driver
-          (log/info "Resetting chrome driver.")
-          (reset! driver (e/chrome)))
+        (reset-driver!)
 
         (try
           (let [data (d/with-retry {:retry-on    Exception
@@ -274,9 +285,9 @@
 
 (defn cue-from-file
   [file template {:keys [sheet start-row
-                         title-col duration-col time-in-col time-out-col authors-col isrc-col]
+                         title-col duration-col time-in-col time-out-col authors-col isrc-col interpreter-col]
                   :or   {sheet       1 start-row 12 title-col "A" duration-col "C"
-                         time-in-col "D" time-out-col "E" authors-col "F" isrc-col "L"}
+                         time-in-col "D" time-out-col "E" authors-col "F" interpreter-col "J" isrc-col "L"}
                   :as   opts}]
   (let [data        (cue-data-from-file file)
         path        (if (string? file)
@@ -300,6 +311,7 @@
         (x/set-cell! (x/select-cell (str time-in-col row) sheet) time-in)
         (x/set-cell! (x/select-cell (str time-out-col row) sheet) time-out)
         (x/set-cell! (x/select-cell (str authors-col row) sheet) authors)
+        (x/set-cell! (x/select-cell (str interpreter-col row) sheet) authors)
         (x/set-cell! (x/select-cell (str duration-col row) sheet) duration)
         (x/set-cell! (x/select-cell (str isrc-col row) sheet) isrc)))
 
@@ -308,8 +320,11 @@
 (defn cue-from-files
   [dir template opts]
   (doseq [edl (fs/find-files* dir #(when (fs/file? %)
-                                         (contains? #{".edl" ".txt"} (string/lower-case (fs/extension %)))))]
+                                     (contains? #{".edl" ".txt"} (string/lower-case (fs/extension %)))))]
     (println "Working on" (.getPath ^File edl) "...")
     (cue-from-file edl template opts)))
 
 (defn -main [& args])
+
+(comment
+  (cue-from-files "/home/lurodrigo/edl/pop" "/home/lurodrigo/edl/modelo_pop.xlsx" {}))
