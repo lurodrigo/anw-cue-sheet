@@ -13,13 +13,34 @@
   (:import (java.io File ByteArrayInputStream))
   (:gen-class))
 
+(defn join
+  [& args]
+  (.getPath (apply io/file args)))
+;
+;(def base-dir
+;  (if (SystemUtils/IS_OS_WINDOWS)
+;    (join (fs/home) (System/getProperty "user.name")".anw")
+;    (join (fs/home) ".anw")))
+
+(def base-dir
+  (join (fs/home) ".anw"))
+
+(defn in-base-dir
+  [& args]
+  (apply join base-dir args))
+
+(defn ensure-base-dir-exists!
+  []
+  (when-not (fs/exists? base-dir)
+    (fs/mkdir base-dir)))
+
 (defonce db (do
-              (fs/mkdir (fs/expand-home "~/.anw"))
-              (pers/file-atom {} (fs/expand-home "~/.anw/db.atom"))))
+              (ensure-base-dir-exists!)
+              (pers/file-atom {} (in-base-dir "db.atom"))))
 
 (defonce headless? (atom true))
 
-(defonce driver (atom nil))
+(defonce driver (atom nil))()
 
 (def ^:const line-marker #"(?m)(?=^\d{3})")
 (def ^:const line-re #"(\d{3})\s+(\w+)\s+(\w+)\s+(\w+)\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})")

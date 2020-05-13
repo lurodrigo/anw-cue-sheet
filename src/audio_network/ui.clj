@@ -13,11 +13,11 @@
   (:gen-class))
 
 (defonce ui-info (do
-                   (fs/mkdir (fs/expand-home "~/.anw"))
+                   (core/ensure-base-dir-exists!)
                    (pers/file-atom {:model-folder  nil
                                     :target-folder nil
                                     :last-model    nil}
-                                   (fs/expand-home "~/.anw/ui.atom"))))
+                                   (core/in-base-dir "ui.atom"))))
 
 (def state
   (atom {:title       "ANW Cue Sheet Generator"
@@ -250,5 +250,5 @@
 (defn -main
   []
   (timbre/merge-config!
-    {:appenders {:spit (appenders/spit-appender {:fname (fs/expand-home "~/.anw/anw.log")})}})
+    {:appenders {:spit (appenders/spit-appender {:fname (core/in-base-dir "anw.log")})}})
   (mount-renderer!))
