@@ -10,7 +10,8 @@
             [etaoin.api :as e]
             [me.raynes.fs :as fs]
             [taoensso.timbre :as log])
-  (:import (java.io File ByteArrayInputStream)))
+  (:import (java.io File ByteArrayInputStream))
+  (:gen-class))
 
 (defonce db (do
               (fs/mkdir (fs/expand-home "~/.anw"))
@@ -227,12 +228,22 @@
                  (mapv (comp extract-inner (partial e/get-element-inner-html-el driver))
                        (e/query-all driver {:css ".track__advanced-value"})))))))
 
-; TODO ensure exists properly, dispose
+(defn quit-driver-if-exists!
+  []
+  (when @driver
+    (e/quit @driver)
+    (reset! driver nil)))
+
 (defn reset-driver!
   []
+  (quit-driver-if-exists!)
+  (log/info "Resetting chrome driver.")
+  (reset! driver (e/chrome {:headless @headless?})))
+
+(defn ensure-driver-up!
+  []
   (when-not @driver
-    (log/info "Resetting chrome driver.")
-    (reset! driver (e/chrome {:headless @headless?}))))
+    (reset-driver!)))
 
 (defn get-an-info!
   [anw-code]
@@ -244,7 +255,7 @@
       (do
         (log/info anw-code "not found a local db.")
 
-        (reset-driver!)
+        (ensure-driver-up!)
 
         (try
           (let [data (d/with-retry {:retry-on    Exception
@@ -323,8 +334,6 @@
                                      (contains? #{".edl" ".txt"} (string/lower-case (fs/extension %)))))]
     (log/info "Working on" (.getPath ^File edl) "...")
     (cue-from-file edl template opts)))
-
-(defn -main [& args])
 
 (comment
   (cue-from-files "/home/lurodrigo/edl/pop" "/home/lurodrigo/edl/modelo_pop.xlsx" {}))

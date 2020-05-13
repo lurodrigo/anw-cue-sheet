@@ -17,15 +17,14 @@
     <orderEntry type="library" name="Leiningen: cheshire:5.6.3" level="project" />
     <orderEntry type="library" name="Leiningen: clj-http:2.3.0" level="project" />
     <orderEntry type="library" name="Leiningen: clj-tuple:0.2.2" level="project" />
+    <orderEntry type="library" name="Leiningen: cljfx:1.7.2" level="project" />
+    <orderEntry type="library" name="Leiningen: cljfx:1.7.2:jdk11" level="project" />
     <orderEntry type="library" name="Leiningen: clojure-complete:0.2.5" level="project" />
     <orderEntry type="library" name="Leiningen: com.fasterxml.jackson.core/jackson-core:2.7.5" level="project" />
     <orderEntry type="library" name="Leiningen: com.fasterxml.jackson.dataformat/jackson-dataformat-cbor:2.7.5" level="project" />
     <orderEntry type="library" name="Leiningen: com.fasterxml.jackson.dataformat/jackson-dataformat-smile:2.7.5" level="project" />
-    <orderEntry type="library" name="Leiningen: com.fifesoft/rsyntaxtextarea:2.5.6" level="project" />
     <orderEntry type="library" name="Leiningen: com.fzakaria/slf4j-timbre:0.3.14" level="project" />
     <orderEntry type="library" name="Leiningen: com.github.virtuald/curvesapi:1.04" level="project" />
-    <orderEntry type="library" name="Leiningen: com.jgoodies/forms:1.2.1" level="project" />
-    <orderEntry type="library" name="Leiningen: com.miglayout/miglayout:3.7.4" level="project" />
     <orderEntry type="library" name="Leiningen: com.taoensso/encore:2.91.0" level="project" />
     <orderEntry type="library" name="Leiningen: com.taoensso/timbre:4.10.0" level="project" />
     <orderEntry type="library" name="Leiningen: com.taoensso/truss:1.5.0" level="project" />
@@ -36,7 +35,6 @@
     <orderEntry type="library" name="Leiningen: dk.ative/docjure:1.13.0" level="project" />
     <orderEntry type="library" name="Leiningen: etaoin:0.3.6" level="project" />
     <orderEntry type="library" name="Leiningen: io.aviso/pretty:0.1.33" level="project" />
-    <orderEntry type="library" name="Leiningen: j18n:1.0.2" level="project" />
     <orderEntry type="library" name="Leiningen: me.raynes/fs:1.4.6" level="project" />
     <orderEntry type="library" name="Leiningen: net.jodah/failsafe:2.3.1" level="project" />
     <orderEntry type="library" name="Leiningen: nrepl:0.6.0" level="project" />
@@ -56,17 +54,20 @@
     <orderEntry type="library" name="Leiningen: org.clojure/spec.alpha:0.2.176" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/tools.logging:0.3.1" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/tools.reader:0.10.0" level="project" />
+    <orderEntry type="library" name="Leiningen: org.openjfx/javafx-base:14" level="project" />
+    <orderEntry type="library" name="Leiningen: org.openjfx/javafx-base:14:linux" level="project" />
+    <orderEntry type="library" name="Leiningen: org.openjfx/javafx-controls:14" level="project" />
+    <orderEntry type="library" name="Leiningen: org.openjfx/javafx-controls:14:linux" level="project" />
+    <orderEntry type="library" name="Leiningen: org.openjfx/javafx-graphics:14" level="project" />
+    <orderEntry type="library" name="Leiningen: org.openjfx/javafx-graphics:14:linux" level="project" />
+    <orderEntry type="library" name="Leiningen: org.openjfx/javafx-media:14" level="project" />
+    <orderEntry type="library" name="Leiningen: org.openjfx/javafx-media:14:linux" level="project" />
+    <orderEntry type="library" name="Leiningen: org.openjfx/javafx-web:14" level="project" />
+    <orderEntry type="library" name="Leiningen: org.openjfx/javafx-web:14:linux" level="project" />
     <orderEntry type="library" name="Leiningen: org.slf4j/slf4j-api:1.7.26" level="project" />
-    <orderEntry type="library" name="Leiningen: org.swinglabs.swingx/swingx-action:1.6.3" level="project" />
-    <orderEntry type="library" name="Leiningen: org.swinglabs.swingx/swingx-autocomplete:1.6.3" level="project" />
-    <orderEntry type="library" name="Leiningen: org.swinglabs.swingx/swingx-common:1.6.3" level="project" />
-    <orderEntry type="library" name="Leiningen: org.swinglabs.swingx/swingx-core:1.6.3" level="project" />
-    <orderEntry type="library" name="Leiningen: org.swinglabs.swingx/swingx-painters:1.6.3" level="project" />
-    <orderEntry type="library" name="Leiningen: org.swinglabs.swingx/swingx-plaf:1.6.3" level="project" />
     <orderEntry type="library" name="Leiningen: org.tukaani/xz:1.5" level="project" />
     <orderEntry type="library" name="Leiningen: potemkin:0.4.3" level="project" />
     <orderEntry type="library" name="Leiningen: riddley:0.1.12" level="project" />
-    <orderEntry type="library" name="Leiningen: seesaw:1.5.0" level="project" />
     <orderEntry type="library" name="Leiningen: slingshot:0.12.2" level="project" />
     <orderEntry type="library" name="Leiningen: stax/stax-api:1.0.1" level="project" />
     <orderEntry type="library" name="Leiningen: tigris:0.1.1" level="project" />
