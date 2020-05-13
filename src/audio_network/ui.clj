@@ -56,10 +56,10 @@
                :text    "Modelo de cue sheet"}
               {:fx/type  :h-box
                :spacing  10
-               :children [{:fx/type         :text-field
-                           :pref-width      650
-                           :on-text-changed #(swap! state assoc :model %)
-                           :text            model}
+               :children [{:fx/type    :text-field
+                           :pref-width 650
+                           :editable   false
+                           :text       model}
                           {:fx/type   :button
                            :text      "Selecionar"
                            :on-action {:event/type ::select-model}}]}]})
@@ -97,7 +97,7 @@
                :spacing  10
                :children [{:fx/type         :text-field
                            :pref-width      650
-                           :on-text-changed #(swap! state assoc :target %)
+                           :editable        false
                            :text            target}
                           {:fx/type   :button
                            :text      "Selecionar"
@@ -118,6 +118,7 @@
   {:fx/type :stage
    :showing true
    :title   title
+   :on-close-request {:event/type ::close-app}
    :scene   {:fx/type :scene
              :root    {:fx/type     :v-box
                        :pref-width  800
@@ -145,6 +146,11 @@
   (reset! core/headless? (:headless? @state)))
 
 
+(defmethod handle ::close-app
+  [_]
+  (System/exit 0))
+
+
 (defmethod handle ::change-target-type
   [{:keys [option] :as m}]
   (swap! state assoc :target-type option))
@@ -162,8 +168,7 @@
     (when selection
       (swap! state assoc :model (.getPath ^File selection))
       (pers/swap! ui-info assoc :last-model (.getPath ^File selection))
-      (pers/swap! ui-info assoc :model-folder (.getParent ^File selection))
-      (println @ui-info))))
+      (pers/swap! ui-info assoc :model-folder (.getParent ^File selection)))))
 
 
 (defmethod handle ::select-target [{:keys [^ActionEvent fx/event]}]
@@ -190,8 +195,7 @@
                       @(fx/on-fx-thread (.showDialog chooser window))))]
     (when selection
       (swap! state assoc :target (.getPath ^File selection))
-      (pers/swap! ui-info assoc :target-folder (.getParent ^File selection))
-      (println @ui-info))))
+      (pers/swap! ui-info assoc :target-folder (.getParent ^File selection)))))
 
 
 (defn generate-files!
