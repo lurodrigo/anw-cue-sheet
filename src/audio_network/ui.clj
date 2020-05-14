@@ -206,7 +206,7 @@
     (try
       (do
         (if (fs/directory? target)
-          (core/cue-from-files target model {})
+          (core/cue-from-dir target model {})
           (core/cue-from-file target model {}))
 
         (core/quit-driver-if-exists!)
