@@ -4,7 +4,8 @@
             [me.raynes.fs :as fs]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]
-            [audio-network.core :as core])
+            [audio-network.core :as core]
+            [clojure.string :as string])
   (:import [javafx.stage FileChooser DirectoryChooser]
            [javafx.event ActionEvent]
            [javafx.scene Node]
@@ -12,12 +13,15 @@
            (java.io File))
   (:gen-class))
 
+;; --- State
+
 (defonce ui-info (do
                    (core/ensure-base-dir-exists!)
                    (pers/file-atom {:model-folder  nil
                                     :target-folder nil
                                     :last-model    nil}
                                    (core/in-base-dir "ui.atom"))))
+
 
 (def state
   (atom {:title       "ANW Cue Sheet Generator"
@@ -27,7 +31,9 @@
          :target-type :file
          :headless?   true}))
 
+
 (defn alert!
+  "Helper for putting up an alert."
   ([msg]
    (alert! Alert$AlertType/NONE msg))
   ([type msg]
@@ -46,7 +52,8 @@
        (.setContentText msg)
        (.show)))))
 
-;; Define render functions
+
+;; --- Views
 
 (defn model-input [{:keys [model]}]
   {:fx/type  :v-box
@@ -78,8 +85,15 @@
                           :text         option-str
                           :on-action    (assoc on-action :option option-kw)})}})
 
+(defn many-files-rep
+  [coll]
+  (if (= (count coll) 1)
+    (first coll)
+    (->> coll
+         (mapv (partial format "\"%s\""))
+         (string/join " "))))
 
-(defn target-input [{:keys [target target-type]}]
+(defn target-input [{:keys [target]}]
   {:fx/type  :v-box
    :spacing  10
    :padding  5
@@ -88,17 +102,19 @@
                :children [{:fx/type :label
                            :text    "Alvo"}
                           {:fx/type   radio-group
-                           :options   {:file "Arquivo" :folder "Pasta"}
+                           :options   {:file "Arquivos" :folder "Pasta"}
                            :value     :file
                            :on-action {:event/type ::change-target-type}}
                           ]}
 
               {:fx/type  :h-box
                :spacing  10
-               :children [{:fx/type         :text-field
-                           :pref-width      650
-                           :editable        false
-                           :text            target}
+               :children [{:fx/type    :text-field
+                           :pref-width 650
+                           :editable   false
+                           :text       (if (string? target)
+                                         target
+                                         (many-files-rep target))}
                           {:fx/type   :button
                            :text      "Selecionar"
                            :on-action {:event/type ::select-target}}]}]})
@@ -135,7 +151,7 @@
                                       :on-action {:event/type ::generate}}]}}})
 
 
-; event handling
+;; --- Event handling
 
 (defmulti handle :event/type)
 
@@ -156,11 +172,18 @@
   (swap! state assoc :target-type option))
 
 
+(defn get-if-file-exists
+  "Gets an entry of a map if it points to a existing file."
+  [m key]
+  (when-let [d (get m key)]
+    (when (fs/exists? d) d)))
+
+
 (defmethod handle ::select-model [{:keys [^ActionEvent fx/event]}]
   (let [selection (let [window  (.getWindow (.getScene ^Node (.getTarget event)))
                         chooser (FileChooser.)]
 
-                    (when-let [dir (:model-folder @ui-info)]
+                    (when-let [dir (get-if-file-exists @ui-info :model-folder)]
                       (.setInitialDirectory chooser (File. ^String dir)))
 
                     (.setTitle chooser "Escolha o modelo")
@@ -172,30 +195,36 @@
 
 
 (defmethod handle ::select-target [{:keys [^ActionEvent fx/event]}]
-  (let [init-dir  (:target-folder @ui-info)
+  (let [init-dir  (get-if-file-exists @ui-info :target-folder)
         selection (case (:target-type @state)
                     :file
                     (let [window  (.getWindow (.getScene ^Node (.getTarget event)))
                           chooser (doto (FileChooser.)
-                                    (.setTitle "Escolha o arquivo"))]
+                                    (.setTitle "Escolha os arquivos:"))]
 
                       (when init-dir
                         (.setInitialDirectory chooser (File. ^String init-dir)))
 
-                      @(fx/on-fx-thread (.showOpenDialog chooser window)))
+                      (seq @(fx/on-fx-thread (.showOpenMultipleDialog chooser window))))
 
                     :folder
                     (let [window  (.getWindow (.getScene ^Node (.getTarget event)))
                           chooser (doto (DirectoryChooser.)
-                                    (.setTitle "Escolha a pasta"))]
+                                    (.setTitle "Escolha a pasta:"))]
 
                       (when init-dir
                         (.setInitialDirectory chooser (File. ^String init-dir)))
 
                       @(fx/on-fx-thread (.showDialog chooser window))))]
+
     (when selection
-      (swap! state assoc :target (.getPath ^File selection))
-      (pers/swap! ui-info assoc :target-folder (.getParent ^File selection)))))
+      (if (coll? selection)
+        (let [first-selected (first selection)]
+          (swap! state assoc :target (mapv #(.getPath ^File %) selection))
+          (pers/swap! ui-info assoc :target-folder (.getParent ^File first-selected)))
+        (do
+          (swap! state assoc :target (.getPath ^File selection))
+          (pers/swap! ui-info assoc :target-folder (.getParent ^File selection)))))))
 
 
 (defn generate-files!
@@ -205,9 +234,9 @@
 
     (try
       (do
-        (if (fs/directory? target)
-          (core/cue-from-dir target model {})
-          (core/cue-from-file target model {}))
+        (if (coll? target)
+          (core/cue-from-files target model {})
+          (core/cue-from-dir target model {}))
 
         (core/quit-driver-if-exists!)
         (alert! :alert/info "Uhull!" "EDL(s) gerados com sucesso!"))
@@ -218,7 +247,9 @@
 
 (defmethod handle ::generate
   [_]
-  (let [{:keys [model target]} @state]
+  (let [{:keys [model target]} @state
+        non-existing (when (coll? target)
+                       (vec (remove fs/exists? target)))]
     (cond
       (empty? model)
       (alert! :alert/error "Ops..." "Você precisa escolher um modelo!")
@@ -229,12 +260,26 @@
       (empty? target)
       (alert! :alert/error "Ops..." "Você precisa escolher um alvo!")
 
-      (not (fs/exists? target))
+      (not (empty? non-existing))
+      (alert! :alert/error "Ops..."
+              (cond
+                (= (count target) 1)
+                "O alvo escolhido não existe mais!"
+
+                (= (count non-existing) 1)
+                (format "O alvo \"%s\" não existe mais!" (first non-existing))
+
+                :else
+                (format "Os alvos\n%s\n não existem mais!" (string/join "\n" non-existing))))
+
+      (and (string? target) (fs/exists? target))
       (alert! :alert/error "Ops..." "O alvo escolhido não existe mais!")
 
       :else
       (generate-files!))))
 
+
+;; --- Initialization
 
 (def renderer
   (fx/create-renderer
