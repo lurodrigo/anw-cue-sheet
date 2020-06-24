@@ -1,4 +1,4 @@
-# anw-tool
+# anw-cue-sheet
 
 A small application I made for my girlfriend to automate generating
 cue sheets from EDL files. She often uses Audio Network, so she had the laborious task of 
@@ -29,5 +29,5 @@ There's also a GUI, written with [cljfx](https://github.com/cljfx/cljfx), that's
 
 ## License
 
-Copyright © 2020 MIT License
+Distributed under the MIT License.
 
