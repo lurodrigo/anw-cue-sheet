@@ -13,7 +13,6 @@
   (:gen-class))
 
 ;; --- Base dir utils
-
 (defn join
   "Joins parts of a path correctly."
   [& args]
@@ -75,8 +74,9 @@
 
 ;; --- Parsing
 
-(def ^:const edl-block-marker #"(?m)(?=^\d{3})")            ; three digits mark a new EDl blocK
-(def ^:const edl-block-re #"(\d{3})\s+(\w+)\s+(\w+)\s+(\w+)\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})")
+(def ^:const edl-block-marker #"(?m)(?=^\d{3,6})")            ; three digits mark a new EDl blocK
+; (def ^:const edl-block-re #"(\d{3,6})\s+(\w+)\s+(\w+)\s+(\w+)\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})")
+(def ^:const edl-block-re #"(\d{3,6})\s+(.+)(?=A(?:\d+|\s{2,}))(A(?:\d+|\s{2,}))\s+(\w+)\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2}:\d{2})")
 
 
 (defn parse-edl-block
@@ -84,7 +84,7 @@
   [block]
   (let [[valid edit reel channel trans source-in source-out
          record-in record-out] (re-find edl-block-re block)
-        mat     (re-matcher #"(?m)\* FROM CLIP NAME: (.*)[\r$]" block)
+        mat     (re-matcher #"(?m)\* ?FROM CLIP NAME: (.*)[\r$]" block)
         matches (->> (repeatedly #(re-find mat))
                      (take-while some?)
                      (mapv second))
@@ -169,7 +169,6 @@
      :from       from}))
 
 
-
 (defn normalize-anw
   "Extracts the relevant part of a string containing an ANW code and normalizes it."
   [filename]
@@ -180,6 +179,26 @@
         (when (and m n)
           (format "ANW%04d_%03d" (Integer/parseInt m) (Integer/parseInt n)))))))
 
+
+(defn normalize-anw-from-title
+  "Gambiarra. Extracts the relevant part of a string containing an ANW code and normalizes it."
+  [title]
+  (let [splitted (last (string/split title #"(?=ANW)"))]
+    (when (string/starts-with? splitted "ANW")
+      (let [[_ m n] (re-find #"ANW\s?(\d{4}).(\d+)" splitted)]
+        (when (and m n)
+          (format "ANW%04d_%03d" (Integer/parseInt m) (Integer/parseInt n)))))))
+
+
+;(defn normalize-anw
+;  "Extracts the relevant part of a string containing an ANW code and normalizes it."
+;  [filename]
+;  (let [splitted (last (string/split filename #"(?=ANW)"))]
+;    (when (string/starts-with? splitted "ANW")
+;      (let [we (fs/base-name filename true)
+;            [_ m n] (re-find #"ANW\s?(\d{4}).(\d+)" we)]
+;        (when (and m n)
+;          (format "ANW%04d_%03d" (Integer/parseInt m) (Integer/parseInt n)))))))
 
 (defn process
   "Given parsed blocks, processes them to produce all data necessary for a sheet.
@@ -234,7 +253,7 @@
                                   (mapv (fn [el]
                                           [el (e/get-element-attr-el driver el "title")]))
                                   (filterv (fn [[_ title]]
-                                             (= (normalize-anw query) (normalize-anw title)))))
+                                             (= (normalize-anw query) (normalize-anw-from-title title)))))
           without-awn (re-find #"\d+/\d+" title)]
 
       (log/info "Going to track page.")

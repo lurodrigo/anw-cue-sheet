@@ -1,8 +1,7 @@
-(defproject audio-network "0.1.3"
+(defproject audio-network "0.1.4"
   :description "Tool for automatic generation of cue sheets with data from Audio Network"
-  :url "http://example.com/FIXME"
-  :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
-            :url  "https://www.eclipse.org/legal/epl-2.0/"}
+  :url "http://github.com/lurodrigo/anw-tool"
+  :license {:name "MIT License"}
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [org.clojure/algo.generic "0.1.3"]
                  [alandipert/enduro "1.2.0"]
